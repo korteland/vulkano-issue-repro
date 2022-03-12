@@ -1,61 +1,61 @@
-use cgmath::Deg;
-use cgmath::Matrix4;
-use cgmath::Point3;
-use cgmath::Rad;
-use cgmath::Vector3;
+use bytemuck::{Pod, Zeroable};
 
-use image::GenericImageView;
+// use cgmath::Deg;
+// use cgmath::Matrix4;
+// use cgmath::Point3;
+// use cgmath::Rad;
+// use cgmath::Vector3;
 
-use std::collections::HashSet;
+// use image::GenericImageView;
+
+// use std::collections::HashSet;
 use std::error::Error;
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Instant;
+// use std::sync::Mutex;
+// use std::time::Instant;
 
-use vulkano::buffer::BufferUsage;
-use vulkano::buffer::CpuAccessibleBuffer;
-use vulkano::descriptor_set::layout::DescriptorSetLayout;
-use vulkano::descriptor_set::single_layout_pool::SingleLayoutDescSet;
-use vulkano::descriptor_set::SingleLayoutDescSetPool;
-use vulkano::descriptor_set::WriteDescriptorSet;
-use vulkano::device::Device;
+// use vulkano::buffer::BufferUsage;
+// use vulkano::buffer::CpuAccessibleBuffer;
+// use vulkano::descriptor_set::layout::DescriptorSetLayout;
+// use vulkano::descriptor_set::single_layout_pool::SingleLayoutDescSet;
+// use vulkano::descriptor_set::SingleLayoutDescSetPool;
+// use vulkano::descriptor_set::WriteDescriptorSet;
+// use vulkano::device::Device;
 use vulkano::device::DeviceExtensions;
 use vulkano::device::physical::PhysicalDevice;
-use vulkano::device::Queue;
-use vulkano::format::Format;
-use vulkano::image::ImageDimensions;
-use vulkano::image::ImageUsage;
-use vulkano::image::ImmutableImage;
-use vulkano::image::MipmapsCount;
-use vulkano::image::SampleCount;
-use vulkano::image::SwapchainImage;
-use vulkano::image::view::ImageView;
-use vulkano::instance::ApplicationInfo;
+// use vulkano::device::Queue;
+// use vulkano::format::Format;
+// use vulkano::image::ImageDimensions;
+// use vulkano::image::ImageUsage;
+// use vulkano::image::ImmutableImage;
+// use vulkano::image::MipmapsCount;
+// use vulkano::image::SampleCount;
+// use vulkano::image::SwapchainImage;
+// use vulkano::image::view::ImageView;
 use vulkano::instance::Instance;
+use vulkano::instance::InstanceCreateInfo;
 use vulkano::instance::InstanceExtensions;
 use vulkano::instance::Version;
-use vulkano::pipeline::GraphicsPipeline;
-use vulkano::pipeline::Pipeline;
-use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
-use vulkano::pipeline::graphics::rasterization::CullMode;
-use vulkano::pipeline::graphics::rasterization::RasterizationState;
-use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
-use vulkano::pipeline::graphics::viewport::Scissor;
-use vulkano::pipeline::graphics::viewport::Viewport;
-use vulkano::pipeline::graphics::viewport::ViewportState;
-use vulkano::render_pass::RenderPass;
-use vulkano::render_pass::Subpass;
-use vulkano::sampler::Sampler;
-use vulkano::swapchain::Capabilities;
-use vulkano::swapchain::ColorSpace;
-use vulkano::swapchain::CompositeAlpha;
-use vulkano::swapchain::FullscreenExclusive;
-use vulkano::swapchain::PresentMode;
-use vulkano::swapchain::SupportedPresentModes;
-use vulkano::swapchain::Swapchain;
+// use vulkano::pipeline::GraphicsPipeline;
+// use vulkano::pipeline::Pipeline;
+// use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
+// use vulkano::pipeline::graphics::rasterization::CullMode;
+// use vulkano::pipeline::graphics::rasterization::RasterizationState;
+// use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
+// use vulkano::pipeline::graphics::viewport::Scissor;
+// use vulkano::pipeline::graphics::viewport::Viewport;
+// use vulkano::pipeline::graphics::viewport::ViewportState;
+// use vulkano::render_pass::RenderPass;
+// use vulkano::render_pass::Subpass;
+// use vulkano::sampler::Sampler;
+// use vulkano::swapchain::ColorSpace;
+// use vulkano::swapchain::CompositeAlpha;
+// use vulkano::swapchain::FullScreenExclusive;
+// use vulkano::swapchain::PresentMode;
+// use vulkano::swapchain::Swapchain;
 use vulkano::swapchain::Surface;
-use vulkano::sync::GpuFuture;
-use vulkano::sync::SharingMode;
+// use vulkano::sync::GpuFuture;
+// use vulkano::sync::SharingMode;
 
 use vulkano_win::VkSurfaceBuild;
 
@@ -63,8 +63,11 @@ use winit::event_loop::EventLoop;
 use winit::window::Window;
 use winit::window::WindowBuilder;
 
-const TEXTURE_PATH: &str = "src/test.png";
+// const TEXTURE_PATH: &str = "src/test.png";
+const VALIDATION_LAYERS: &[&str] = &["VK_LAYER_KHRONOS_validation"];
+const ENABLE_VALIDATION_LAYERS: bool = true;
 
+/*
 #[derive(Copy, Clone)]
 struct UniformBufferObject {
     // these are all used, but in the vertex shader. names need to match.
@@ -76,7 +79,8 @@ struct UniformBufferObject {
     proj: Matrix4<f32>,
 }
 
-#[derive(Default, Copy, Clone)]
+#[repr(C)]
+#[derive(Default, Copy, Clone, Zeroable, Pod)]
 struct Vertex {
     pos: [f32; 3],
     colour: [f32; 3],
@@ -90,6 +94,7 @@ impl Vertex {
 }
 
 vulkano::impl_vertex!(Vertex, pos, colour, tex);
+*/
 
 struct QueueFamilyIndices {
     graphics_family: Option<usize>,
@@ -122,6 +127,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let event_loop = EventLoop::new();
     let surface = create_surface(&event_loop, &instance);
     let physical_device_index = pick_physical_device(&instance, &surface)?;
+
+    /*
 
     let (device, graphics_queue, present_queue) =
         create_logical_device(&instance, &surface, physical_device_index)?;
@@ -161,10 +168,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         &texture_image,
         &image_sampler,
     )?;
+    */
 
     Ok(())
 }
 
+/*
 fn create_descriptor_sets(
     pool: &Arc<Mutex<SingleLayoutDescSetPool>>,
     uniform_buffers: &[Arc<CpuAccessibleBuffer<UniformBufferObject>>],
@@ -541,6 +550,7 @@ fn choose_swap_extent(capabilities: &Capabilities) -> [u32; 2] {
         actual_extent
     }
 }
+*/
 
 fn pick_physical_device(
     instance: &Arc<Instance>,
@@ -560,10 +570,10 @@ fn is_device_suitable(surface: &Arc<Surface<Window>>, device: &PhysicalDevice) -
     let extensions_supported = check_device_extension_support(device);
 
     let swapchain_adequate = if extensions_supported {
-        let capabilities = surface.capabilities(*device)?;
+        let surface_formats = device.surface_formats(surface, Default::default())?;
+        let mut surface_present_modes = device.surface_present_modes(surface)?;
 
-        !capabilities.supported_formats.is_empty()
-            && capabilities.present_modes.iter().next().is_some()
+        !surface_formats.is_empty() && surface_present_modes.next().is_some()
     } else {
         false
     };
@@ -587,7 +597,7 @@ fn find_queue_families(
             indices.graphics_family = Some(i);
         }
 
-        if surface.is_supported(queue_family)? {
+        if queue_family.supports_surface(surface)? {
             indices.present_family = Some(i);
         }
 
@@ -610,34 +620,47 @@ fn create_surface(
         .unwrap()
 }
 
+fn check_validation_layer_support() -> Result<bool, Box<dyn Error>> {
+    let layers: Vec<_> = vulkano::instance::layers_list()?
+        .map(|l| l.name().to_owned())
+        .collect();
+
+    Ok(VALIDATION_LAYERS
+       .iter()
+       .all(|layer_name| layers.contains(&layer_name.to_string())))
+}
 
 fn create_instance() -> Result<Arc<Instance>, Box<dyn Error>> {
     let supported_extensions = InstanceExtensions::supported_by_core()?;
     println!("supported extensions: {:?}", supported_extensions);
 
-    let app_info = ApplicationInfo {
+    let required_extensions = get_required_extensions();
+
+    let create_info = InstanceCreateInfo {
         application_name: Some("test".into()),
-        application_version: Some(Version {
+        application_version: Version {
             major: env!("CARGO_PKG_VERSION_MAJOR").parse()?,
             minor: env!("CARGO_PKG_VERSION_MINOR").parse()?,
             patch: env!("CARGO_PKG_VERSION_PATCH").parse()?,
-        }),
+        },
+        enabled_extensions: required_extensions,
+        enabled_layers: if ENABLE_VALIDATION_LAYERS && check_validation_layer_support()? {
+            VALIDATION_LAYERS.iter().map(|&s| s.into()).collect()
+        } else {
+            vec![]
+        },
         engine_name: Some("No engine".into()),
-        engine_version: Some(Version {
+        engine_version: Version {
             major: 1,
             minor: 0,
             patch: 0,
-        }),
+        },
+        max_api_version: Some(vulkano::Version::V1_2),
+        ..Default::default()
     };
 
-    let required_extensions = get_required_extensions();
 
-    Ok(Instance::new(
-        Some(&app_info),
-        vulkano::Version::V1_2,
-        &required_extensions,
-        None,
-    ).unwrap())
+    Ok(Instance::new(create_info).unwrap())
 }
 
 fn get_required_extensions() -> InstanceExtensions {
